@@ -1,14 +1,16 @@
 require 'rubygems'
 require 'simple-rss'
 require 'faraday'
+require 'faraday_middleware'
 require 'open-uri'
 require 'time'
 require 'ap'
 
-keywords = %w[环境保护 自然保护 森林 热带雨林 环境 自然 保护 生命科学 生命 科学 研究 论坛 林 热带 雨林]
+keywords = '气候 变化 低碳 新能源 CSR 环保 环境 领域 研究 数据监测 联盟 论坛 绿色 生态 政策 可持续 南极 北极 天气 动物 盗猎'.split(' ')
 
 def url(keyword)
-  u = "https://news.google.com/news/rss/search/section/q/#{keyword}/#{keyword}?hl=zh-CN&gl=CN&ned=cn"
+  # u = "https://news.google.com/news/rss/search/section/q/#{keyword}/#{keyword}?hl=zh-CN&gl=CN&ned=cn"
+  u = "https://news.google.com/_/rss/search?q=#{keyword}&hl=zh-CN&gl=CN&ceid=CN:zh-Hans"
   uri = URI::encode u
   uri
 end
@@ -26,7 +28,11 @@ def in_range(datetime)
 end
 
 def print_list(keyword)
-  txt = Faraday.get url(keyword)
+  conn = Faraday.new(url(keyword)) { |b|
+    b.use FaradayMiddleware::FollowRedirects
+    b.adapter :net_http
+  }
+  txt = conn.get 
   rss = SimpleRSS.parse txt.body
   rss.entries.each do |r|
     next if !in_range(r.pubDate)
